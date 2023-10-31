@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Reader</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #333; /* Dark grey background color */
+            color: #fff; /* Text color */
+        }
+
+        /* Style the container */
+        .container {
+            background-color: #222; /* Darker grey container background color */
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        /* Style the form */
+        #news-form {
+            margin-bottom: 20px;
+        }
+
+        /* Style the checkboxes and labels */
+        .form-check-input {
+            margin-right: 10px;
+        }
+
+        /* Style the articles list */
+        #articles-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #articles-list li {
+            margin-bottom: 10px;
+        }
+
+        /* Style for loading spinner */
+        .loading-spinner {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            font-size: 3rem; /* Adjust the size as needed */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">LANA: Local Automatic News Agent</h1>
+        <form id="news-form">
+            <label>Select News Sources:</label>
+            <ul>
+                <li><input type="checkbox" name="sources" value="Bristol Post"> Bristol Post</li>
+                <li><input type="checkbox" name="sources" value="BBC Bristol"> BBC Bristol</li>
+                <li><input type="checkbox" name="sources" value="The Guardian Bristol"> The Guardian Bristol</li>
+            </ul>
+
+            <label>Select Sports Teams:</label>
+            <ul>
+                <li><input type="checkbox" name="sports_teams" value="Bristol Rovers FC"> Bristol Rovers FC</li>
+                <li><input type="checkbox" name="sports_teams" value="Bristol City FC"> Bristol City FC</li>
+                <li><input type="checkbox" name="sports_teams" value="Bristol Bears"> Bristol Bears</li>
+            </ul>
+        </form>
+
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="weather_checkbox" value="include_weather">
+            <label class="form-check-label">Include Weather Data</label>
+        </div>
+        <div class "form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="traffic_checkbox" value="include_traffic">
+            <label class="form-check-label">Include Traffic Data</label>
+        </div>
+
+        <div class="form-group">
+            <label for="tickers">Enter Stock/Crypto Tickers (comma-separated):</label>
+            <input type="text" class="form-control" id="tickers" name="tickers">
+        </div>
+        <div class="form-group">
+            <label for "sport_team">What Sport Team Do You Support?</label>
+            <input type="text" class="form-control" id="sport_team" name="sport_team">
+        </div>
+        <div class="form-group">
+            <label for="inspirational_dropdown">Select an Inspirational Person:</label>
+            <select class="form-control" id="inspirational_dropdown" name="inspirational_dropdown">
+                <option value="">Select...</option>
+                <option value="Albert Einstein">Albert Einstein</option>
+                <option value="Mahatma Gandhi">Mahatma Gandhi</option>
+                <option value="Maya Angelou">Maya Angelou</option>
+                <option value="Nelson Mandela">Nelson Mandela</option>
+                <option value="Oprah Winfrey">Oprah Winfrey</option>
+            </select>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="horoscope_checkbox" value="include_horoscope">
+            <label class="form-check-label">Include Horoscope</label>
+        </div>
+        <button type="button" class="btn btn-primary mt-3" id="fetch-news">Fetch News</button>
+    </form>
+    <div class="mt-4">
+        <h3>Articles</h3>
+        <ul id="articles-list"></ul>
+    </div>
+    <div class="mt-4">
+        <button type="button" class="btn btn-primary" id="generate-summary">Generate Summary</button>
+        <div class="loading-spinner" id="summary-loading-spinner" style="display: none;">Generating...</div>
+    </div>
+    <div class="mt-4">
+        <h3>Summary</h3>
+        <p id="summary-text"></p>
+    </div>
+    <div class="mt-4">
+        <button type="button" class="btn btn-primary" id="generate-audio">Generate Audio</button>
+    </div>
+    <div class="mt-4 text-center">
+        <div class="spinner-border text-primary" id="audio-loading-spinner" style="display: none; font-size: 5rem;"></div>
+    </div>
+    <div class="mt-4">
+        <button type="button" class="btn btn-success" id="play-audio">Play Audio</button>
+        <div class="spinner-border text-primary ml-2" id="loading-spinner" style="display: none;"></div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let articlesData = []; // Store all articles data
+
+        // Function to update articles list
+        function updateArticlesList() {
+            const articlesList = document.getElementById("articles-list");
+            articlesList.innerHTML = "";
+            articlesData.forEach((article, index) => {
+                const listItem = document.createElement("li");
+                listItem.innerHTML = `<a href="${article.link}" target="_blank">${article.title}</a>
+                    <button class="btn btn-danger btn-sm remove-article" data-article-index="${index}">Remove Article</button>`;
+                articlesList.appendChild(listItem);
+            });
+        }
+
+        // Function to remove an article
+        function removeArticle(articleIndex) {
+            const articlesList = document.getElementById("articles-list");
+            articlesList.removeChild(articlesList.childNodes[articleIndex]);
+        }
+
+        document.getElementById("fetch-news").addEventListener("click", function () {
+            const form = document.getElementById("news-form");
+            const formData = new FormData(form);
+
+            fetch("/fetch_news", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if ("error" in data) {
+                    alert(data.error);
+                } else {
+                    articlesData = data.articles; // Update the articles data
+                    updateArticlesList();
+                }
+            })
+            .catch(error => {
+                console.error(error);
+            });
+        });
+
+        document.getElementById("generate-summary").addEventListener("click", function () {
+            // Show loading spinner while generating summary
+            const summaryLoadingSpinner = document.getElementById("summary-loading-spinner");
+            summaryLoadingSpinner.style.display = "block";
+
+            // Extract titles of articles that are not removed
+            const activeArticleTitles = articlesData.map(article => article.title);
+
+            const form = document.getElementById("news-form");
+            const formData = new FormData(form);
+            formData.append("active_articles", JSON.stringify(activeArticleTitles));
+
+            fetch("/generate_summary", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide the loading spinner when summary is generated
+                summaryLoadingSpinner.style.display = "none";
+
+                document.getElementById("summary-text").textContent = data.summary;
+            })
+            .catch(error => {
+                console.error(error);
+            });
+        });
+
+        document.getElementById("generate-audio").addEventListener("click", function () {
+            // Show a larger and centered loading spinner while generating audio
+            const audioLoadingSpinner = document.getElementById("audio-loading-spinner");
+            audioLoadingSpinner.style.display = "block";
+
+            fetch("/generate_audio", {
+                method: "POST"
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide the loading spinner when audio is generated
+                audioLoadingSpinner.style.display = "none";
+
+                alert(data.message);
+            })
+            .catch(error => {
+                console.error(error);
+            });
+        });
+
+        document.getElementById("play-audio").addEventListener("click", function () {
+            const audio = new Audio('/download_audio');
+            audio.play();
+        });
+
+        // Attach event listeners for removing articles
+        const articlesList = document.getElementById("articles-list");
+        articlesList.addEventListener("click", function (event) {
+            if (event.target.classList.contains("remove-article")) {
+                const articleIndex = event.target.getAttribute("data-article-index");
+                const articleTitle = articlesData[articleIndex].title;
+
+                // Send a request to remove the article
+                fetch(`/remove_article/${encodeURIComponent(articleTitle)}`, {
+                    method: "POST"
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if ("message" in data) {
+                        alert(data.message);
+                        // Remove the article from the displayed list
+                        removeArticle(articleIndex);
+                    } else if ("error" in data) {
+                        alert(data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
