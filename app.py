@@ -19,7 +19,7 @@ dialog = ""
 bristol_rss_sources = {
     "Bristol Post": "https://www.bristolpost.co.uk/all-about/traffic-travel?service=rss",
     "Highways England": "http://m.highwaysengland.co.uk/feeds/rss/AllEvents/South%20West.xml",
-    "BBC Bristol": "https://www.bbc.co.uk/news/england/bristol/rss.xml",
+    "BBC Bristol": "http://feeds.bbci.co.uk/news/england/bristol/rss.xml",
     "The Guardian Bristol": "https://www.theguardian.com/uk/bristol/rss","Bristol Rovers FC": "https://www.bristolpost.co.uk/all-about/bristol-rovers-fc?service=rss",
     "Bristol City FC": "https://www.bristolpost.co.uk/all-about/bristol-city-fc?service=rss",
     "Bristol Bears": "https://www.bristolpost.co.uk/all-about/bristol-bears?service=rss"
